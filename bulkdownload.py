@@ -11,7 +11,7 @@ PATH_DIR = "./pub"
 
 # ------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def md5sumCheck():
+def md5sumCheck(original_md5, file_to_check):
     # Source - https://stackoverflow.com/a
     # Posted by PSS, modified by community. See post 'Timeline' for change history
     # Retrieved 2025-11-14, License - CC BY-SA 4.0
@@ -19,29 +19,28 @@ def md5sumCheck():
     # Import hashlib library (md5 method is part of it)
     import hashlib
 
-    # File to check
-    file_name = 'filename.exe'
-
-    # Correct original md5 goes here
-    original_md5 = '5d41402abc4b2a76b9719d911017c592'  
-
     # Open,close, read file and calculate MD5 on its contents 
-    with open(file_name, 'rb') as file_to_check:
+    with open(file_to_check, 'rb') as file:
         # read contents of the file
-        data = file_to_check.read()    
+        data = file.read()    
         # pipe contents of the file through
         md5_returned = hashlib.md5(data).hexdigest()
 
     # Finally compare original MD5 with freshly calculated
     if original_md5 == md5_returned:
         print("MD5 verified.")
+        return 1
     else:
         print("MD5 verification failed!.")
+        return 0
 
 def resume():
-    # Need to do md5sum check to see file integrity
+    # TODO find the folder where the compressed files are found
 
-    # for corrupted files or incomplete file 
+    # TODO Need to do md5sum check to see file integrity
+    # md5sumCheck(original_md5, file_to_check)
+
+    # TODO for corrupted files or incomplete file 
 
     return
 
@@ -66,6 +65,7 @@ def download_file(url, file_name, md5hash):
             length = int(length)
             blocksize = max(4096, length//100)
         else:
+            # ask if there is a better number to assign this
             blocksize = 1000000
 
         # Write to file in chunks and update the progress bar
@@ -92,9 +92,10 @@ def download_and_verify(hash, file_name):
 
     # TODO test if the file exists, if it doesnt then print failed to download
     # if pathlib.Path(file_path).exists(): print("The file exists.")
+    # OR do a try except then if file fails to download then print download failed
 
     # TODO perform md5sum check on the the hash
-
+    # md5sumCheck(original_md5, file_to_check)
 
     # param1: expected_hash, param2: filename
     # local expected_hash=$1
@@ -111,14 +112,7 @@ def download_and_verify(hash, file_name):
     #     echo "**Error** : Failed to download $filename."
     # fi
 
-    # # print each first column word and check
-    # local downloaded_hash=$(md5sum "$filename" | awk '{print $1}')
 
-    # if [ "$downloaded_hash" == "$expected_hash" ]; then
-    #     echo "Completed $filename"
-    # else
-    #     echo "**Error** : Hash mismatch for $filename"
-    # fi
 
 def download_sum_file():
     # download file using BASE_URL
@@ -137,8 +131,10 @@ def download_sum_file():
     # Check if the file exists in the created folder
     if not os.path.exists(f"{PATH_DIR}/sum"): 
         print("Error: Failed to download the 'sum' file.")
+        return 0
     else: 
         print("Succesfully downloaded")
+        return 1
 
 
 # Function to parse the sum file and download json_unicode files
@@ -160,9 +156,11 @@ def parse_sum_file_and_download():
 
 
 def main():
-    download_sum_file()
-    parse_sum_file_and_download()
+    # first download the sum file
+    # download_sum_file()
+    # Then parse the sum file and download
+    # parse_sum_file_and_download()
     print("Done")
 
-main()
+main()  
 
