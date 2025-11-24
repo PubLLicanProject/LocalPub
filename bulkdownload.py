@@ -10,6 +10,7 @@ import sys
 
 # For downloading locally (NON HPC system or to track downloads through command line prints)
 VERBOSE = True
+TEST = False
 
 # Url to which the PMC files are downloaded from
 BASE_URL="https://ftp.ncbi.nlm.nih.gov/pub/wilbur/BioC-PMC"
@@ -38,23 +39,24 @@ def savelog(code, filename):
     
     match code:
         # download dictionary (DLDICT) codes
-        case 100: DLDICT.update({file_name: "Downloaded"})
+        case 100: DLDICT.update({filename: "Downloaded"})
         
         # Existence dictioanry codes (EXISDICT) codes
-        code 200: EXISDICT.update({filename: "Already exists. No Corruption"})
+        case 200: EXISDICT.update({filename: "Already exists. No Corruption"})
         
         # Cooruption dictionary codes (CORRUPT) codes
-        code 300: CORRUPT.update({file_name: {"File is corrupted"}})
+        case 300: CORRUPT.update({filename: {"File is corrupted"}})
         
         # Error dictionary codes
-        case 400: ERRDICT.update({file_name: {"Error": "Failed to download the file"}})
-        case 401: ERRDICT.update({file_name: {"Error": f"File not found in {PATH_DIR}"}})
-        case 402: ERRDICT.update({file_name: {"Error": "User Interrupted process."}})
+        case 400: ERRDICT.update({filename: {"Error": "Failed to download the file"}})
+        case 401: ERRDICT.update({filename: {"Error": f"File not found in {PATH_DIR}"}})
+        case 402: ERRDICT.update({filename: {"Error": "User Interrupted process."}})
+        case 404: ERRDICT.update({filename: {"Error": "Download failed. Connection error"}})
         
 
 def logger():
     """ Log the files in a json format in the chosen directory. """
-    with open(f"{PATH_DIR}/log.json", 'a') as file:
+    with open(f"{PATH_DIR}/log.json", 'w') as file:
         obj = {
             "Errors": ERRDICT,
             "Downloads": DLDICT,
@@ -139,12 +141,11 @@ def download_sum_file():
     with urllib.request.urlopen(BASE_URL + "/" + SUM_FILE) as f:
         html = f.read().decode('utf-8')
         # save the file into the folder as 'sum'
-        with open("./pub/"+SUM_FILE, "w") as file: file.write(html)
+        with open(PATH_DIR +"/"+ SUM_FILE, "w") as file: file.write(html)
     
     # Check if the file exists in the created folder
     if not os.path.exists(f"{PATH_DIR}/sum"): 
         savelog(400, "sum.txt")
-        if VERBOSE: print("Error: Failed to download the 'sum' file.")
         return 1
     else:
         savelog(100, "sum.txt")
@@ -187,27 +188,30 @@ def download_file(url, file_name, md5hash):
 
     return local_filename
 
-def download_and_verify(hash, file_name):
+def download_and_verify(hash, filename):
     """ download and verify the files """
-    file_path = PATH_DIR + file_name
-    url = BASE_URL + "/" + file_name
+    file_path = PATH_DIR + filename
+    url = BASE_URL + "/" + filename
 
     try:
         # Download the file 
-        download_file(url, file_name, hash)
+        download_file(url, filename, hash)
 
-        # Perform md5sum check if file exists.
-        if not pathlib.Path(file_path).exists(): 
-            ERRDICT.update({file_name: {"Error": "Download failed. file not found in folder"}})
+        # Perform md5sum and check if file exists.
+        if not pathlib.Path(file_path).exists():
+            savelog(401, filename)
         else:
             # perform md5sum check on the the hash
             md5sumCheck(hash, file_path)
 
     except KeyboardInterrupt:
-        ERRDICT.update({file_name: {"Error": "User Interrupted process."}})
+        # Exit the Program when keyboard interrupt is pressed and log.
+        savelog(402, filename)
+        logger()
         sys.exit()
     except:
-        ERRDICT.update({file_name: {"Error": "Download failed. Connection error"}})
+        # Log the connection error and put it into the logs
+        savelog(404, filename)
 
 
 # ----------------------------------------------------------------------------------------------------------------------------
@@ -225,33 +229,30 @@ def parse_sum_file_and_download():
             if check_existing_files(split[0], f"{PATH_DIR}/{split[1]}") == 1:
                 hashAndFile.update({split[0] : split[1]})
             else:
-                EXISDICT.update({split[1] : "Already exists. No Corruption"})
+                # Log that file exists and has no corruption
+                savelog(200, split[1])
     
     # Only include the the filenames that have json_ascii in them
     for hash, filename in hashAndFile.copy().items(): 
         if FILETYPE not in filename: del hashAndFile[hash]
 
-    # Remove after checking
+    # Print the name and hash of the file if verbose
     if VERBOSE:
         for hash, filename in hashAndFile.copy().items(): 
             print(hash,":", filename)
 
     # Download the files based on the key value pair
-    for hash, filename in hashAndFile.items(): 
-        download_and_verify(hash, filename)
+    if TEST:
+        i = 0
+        for hash, filename in hashAndFile.items(): 
+            download_and_verify(hash, filename)
+            if i == 2: break
+            i += 1
+    else:
+        for hash, filename in hashAndFile.items(): 
+            download_and_verify(hash, filename)
 
-# ------------------------------ T E S T - S E C T I O N ---------------------------------------------
-
-def test_process():
-    """ test version of the parse_sum_file_and_download_test"""
-
-    # download the sum file
-    download_sum_file()
-
-    # Test download one file and verify
-    download_and_verify("04d28e4832fef427b4b88f8f97540cf8",  "PMC000XXXXX_json_ascii.tar.gz")
-        
-
+# ------------------------------ M A I N ---------------------------------------------
 
 def main():
     # preliminary check for update.txt and sum-new.txt
