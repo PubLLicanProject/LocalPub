@@ -7,15 +7,17 @@ import hashlib
 from pathlib import Path
 
 # For downloading locally (NON HPC system or to track downloads through command line prints)
-VERBOSE = True
-TEST = False
+DEBUGMODE = False
+MAKELOG = False
+PRINTJSON = True
+TESTMODE = False
 
 # Url to which the PMC files are downloaded from
 BASE_URL="https://ftp.ncbi.nlm.nih.gov/pub/wilbur/BioC-PMC"
 SUM_FILE="sum"
 FILETYPE = "json_ascii"
 
-# Log dictionaries 
+# Python objects to turn to dictionaries
 ERRDICT = {}
 DLDICT = {}
 CORRUPT = {}
@@ -55,14 +57,18 @@ def savelog(code, fileName):
 
 def logger():
     """ Log the files in a json format in the chosen directory. """
-    with (PATH_DIR / Path("log.json")).open(mode='w') as file:
-        obj = {
+    obj = {
+            "PATH": str(PATH_DIR.absolute().resolve),
             "Downloads": DLDICT,
             "Errors": ERRDICT,
             "Corrupted": CORRUPT,
             "Existing": EXISDICT
         } 
-        json.dump(obj, file)
+    if PRINTJSON:
+        print(json.dumps(obj))
+    if MAKELOG:
+        with (PATH_DIR / Path("log.json")).open(mode='w') as file:
+            json.dump(obj, file)
 
 
 def md5sumCheck(original_md5, fileName):
@@ -77,11 +83,11 @@ def md5sumCheck(original_md5, fileName):
         # if the md5sum comparison suceeds return 0
         if original_md5 == md5_returned:
             savelog(200, fileName)
-            if VERBOSE: print(f"{fileName} not corrupted")
+            if DEBUGMODE: print(f"{fileName} not corrupted")
             return 0
         else:
             # Log the corrupted file and the wrong md5hash
-            if VERBOSE: print(f"{fileName} is corrupted")
+            if DEBUGMODE: print(f"{fileName} is corrupted")
             savelog(300, fileName)
             return 1
     except FileNotFoundError:
@@ -132,7 +138,7 @@ def check_existing_files(md5hash, fileName):
 
 def download_sum_file():
     # download file using BASE_URL
-    if VERBOSE: print("Downloading the sum file...")
+    if DEBUGMODE: print("Downloading the sum file...")
 
     # Create the folder where the the sum file would be stored
     directory = Path(PATH_DIR)
@@ -152,7 +158,7 @@ def download_sum_file():
         return 1
     else:
         savelog(100, "sum.txt")
-        if VERBOSE: print("Succesfully downloaded")
+        if DEBUGMODE: print("Succesfully downloaded")
         return 0
 
 def download_file(url, fileName, md5hash):
@@ -161,7 +167,7 @@ def download_file(url, fileName, md5hash):
     local_fileName = PATH_DIR / Path(url.split('/')[-1])
 
     # print the current file being downloaded
-    if VERBOSE: print(f"Downloading {fileName} {md5hash}")
+    if DEBUGMODE: print(f"Downloading {fileName} {md5hash}")
 
     try:
         # NOTE the stream=True parameter below
@@ -182,8 +188,8 @@ def download_file(url, fileName, md5hash):
                 for chunk in r.iter_content(chunk_size=None): 
                     f.write(chunk)
                     size += len(chunk)
-                    if VERBOSE and length: print('{:.2f}%'.format((size/length)*100), end='\r')
-            if VERBOSE: print("done")
+                    if DEBUGMODE and length: print('{:.2f}%'.format((size/length)*100), end='\r')
+            if DEBUGMODE: print("done")
     
             # Log the file that has been downloaded
             savelog(100, fileName)
@@ -239,19 +245,19 @@ def parse_sum_file_and_download():
         if FILETYPE not in fileName: del hashAndFile[hash]
 
     # Remove uncorrupted existing files from the list to download
-    if VERBOSE: print("\nPerforming md5sum check.")
+    if DEBUGMODE: print("\nPerforming md5sum check.")
     for hash, fileName in hashAndFile.copy().items():
         if check_existing_files(hash, fileName) == 0: del hashAndFile[hash]
 
-    # Print the name and hash of the file if verbose
-    if VERBOSE:
+    # Print the name and hash of the file if DEBUGMODE
+    if DEBUGMODE:
         print("\nFiles to download:")
         for hash, fileName in hashAndFile.copy().items(): 
             print(hash,":", fileName)
         print("\n")
 
     # Download the files based on the key value pair
-    if TEST:
+    if TESTMODE:
         i = 0
         for hash, fileName in hashAndFile.items(): 
             download_and_verify(hash, fileName)
