@@ -173,8 +173,8 @@ def bulkdownload(path="./pub", filetype="json_ascii", md5mode=True, verbose=True
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
     prog='python download.py',
-    description = f""" Download and Verification Tools for files in https://ftp.ncbi.nlm.nih.gov/pub/wilbur/BioC-PMC.
-                      For list of available files. Use the aforementioned link or see usage shown above.
+    description = """ Tools for https://ftp.ncbi.nlm.nih.gov/pub/wilbur/BioC-PMC.
+                      For list of available files. Use the aforementioned link or type ls.
                       Functionalities of the tools are listed in the options below.
                   """
     )
