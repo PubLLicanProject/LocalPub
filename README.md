@@ -17,6 +17,19 @@ To use this, you need to:
 	3. Test - quickly retrieve and parse json data from the database
 	4. Use - as in, do something with it.  
 
+## Installation
+
+Install the required packages using the command
+
+	pip install -r requirements.txt
+
+## GUI tool
+
+Currently in this version the graphics user interface only supports download functionalities from downloads.py.
+In order to run the GUI simply type the command.
+
+	python gui.py
+
 ## 1. Download
 The tar files can be downloaded using either download.py or download.sh. Download.py can be used
 as module to be imported into another file or as CLI. To use download.py as CLI see below:
