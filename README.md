@@ -26,7 +26,8 @@ Install the required packages using the command
 ## GUI tool
 
 Currently in this version the graphics user interface only supports download functionalities from downloads.py.
-In order to run the GUI simply type the command.
+In order to run the GUI simply type the command. There may still be bugs in the output printed output for the 
+progress bar. This will be fixed in a future update.
 
 	python gui.py
 
