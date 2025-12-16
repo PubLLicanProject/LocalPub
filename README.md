@@ -19,7 +19,11 @@ To use this, you need to:
 
 ## Installation
 
-Install the required packages using the command
+First clone the repository to your chosen directory 
+
+	git clone https://github.com/PubLLicanProject/LocalPub.git
+
+Then install the required packages using the command
 
 	pip install -r requirements.txt
 
