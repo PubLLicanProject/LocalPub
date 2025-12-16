@@ -30,6 +30,12 @@ In order to run the GUI simply type the command. There may still be bugs in the 
 progress bar. This will be fixed in a future update.
 
 	python gui.py
+	
+There is also a gui for creating queries for the database. However, it is to be noted that some queries
+may be very large and can take very long. An example is when querying all the keywords from keywords table of
+pmc_kw.
+
+	python queryGui.py
 
 ## 1. Download
 The tar files can be downloaded using either download.py or download.sh. Download.py can be used
@@ -51,13 +57,30 @@ The files may also be downloaded using download.sh.
 
 
 ## 2. Build Database
+The database can be built by using the python CLI shown below. This can be used as a module to be run 
+on a script or used as CLI or for a pipeline. The options for building the database is shown below.
+
+	python build_db.py
+
+	options:
+     -h, --help            show this help message and exit
+     -s [db] [filePath]    Process a single tarfile specified in the filePath argument.
+     -b [db] [folderPath]  Bulk Process all the tar.gz files in the folderPath specified.
+     -p [db] [folderPath]  Bulk process tar.gz in folderPath. For use in a pipeline. Excepts a json stdout from
+                           download.py
+
 Builds a database to extract and store each file downloaded file. To insert
 
 	Build:
 	build.sh to insert all of the publications into a local file sqlite databse
 
 ## Retrieve a single paper
-Run a query to retrieve a single paper 
+To retrieve a single paper you may use the GUI for querying: queryGui. It will return results based on the SQL
+query that you put on the GUI.
+
+	python queryGui.py
+
+You may also run a query to retrieve a single paper by using the bash version of the above.
 
 	test.sh 
 

@@ -3,18 +3,11 @@ import sqlite3
 import tarfile
 import zlib
 import json
+import argparse
 from pathlib import Path
 
-# TODO take a json print input from bash to note what has been downloaded to put in the DB
-# TODO from that input in bash read the PATH from where to find the files
-# TODO from that input open the tar.gz and process the files and put them inside the DB
-# TODO batch these into testable functions that can just be runhel
-
-# TODO automate the task so that it puts it in the DB
-# TODO Find things that need automation
 
 stopwords = set(["i", "me", "my", "myself", "we", "our", "ours", "ourselves", "you", "your", "yours", "yourself", "yourselves", "he", "him", "his", "himself", "she", "her", "hers", "herself", "it", "its", "itself", "they", "them", "their", "theirs", "themselves", "what", "which", "who", "whom", "this", "that", "these", "those", "am", "is", "are", "was", "were", "be", "been", "being", "have", "has", "had", "having", "do", "does", "did", "doing", "a", "an", "the", "and", "but", "if", "or", "because", "as", "until", "while", "of", "at", "by", "for", "with", "about", "against", "between", "into", "through", "during", "before", "after", "above", "below", "to", "from", "up", "down", "in", "out", "on", "off", "over", "under", "again", "further", "then", "once", "here", "there", "when", "where", "why", "how", "all", "any", "both", "each", "few", "more", "most", "other", "some", "such", "no", "nor", "not", "only", "own", "same", "so", "than", "too", "very", "s", "t", "can", "will", "just", "don", "should", "now"])
-
 batch_data = []
 batch_data_keywords = []
 
@@ -23,88 +16,8 @@ BATCH_SIZE = 1024
 
 # Options
 VERBOSE = True
+log = {"Failed": {}}
 
-
-    
-# ----------------------------- P I P E L I N E - & - C L I - A R G - H A N D L E R ----------------------------
-
-def options(op):
-    """ Handles the options for command line arguments """
-    match op:
-        
-        # bulk process option
-        case "-b": return PrepareTarInput()
-            
-        # Process a single file
-        case "-s": return processSysArgs()
-        
-        # none of the available options were used
-        case _:
-            print("No such options were found")
-            sys.exit()
-
-def processSysArgs():
-    """ Process the command line arguments and return a list of paths.
-        Do not include Paths that do not exists."""
-    return [Path(sys.argv[idx]) for idx in range(len(sys.argv)) if idx > 1 and Path(sys.argv[idx]).resolve().exists()]
-    
-def PrepareTarInput():
-    """ Process the piped json file """
-    pyobj = json.loads(sys.stdin.read())
-    
-    # Get the path passed from bulkdownloads.py
-    path = pyobj["Path"]
- 
-    # Get the download
-    tar_file_paths = [Path(path +"/"+ obj).resolve() for obj in pyobj["Downloads"].keys() if obj != "sum"]
-    
-    # return a list of paths
-    return tar_file_paths
-
-# --------------------------------------------- L O G G I N G - F U N C T I O N S -------------------------------------
-
-insdict = {}
-errdict = {}
-existing = {}
-
-def savelog(code, fileName):
-    match code:
-        # code for sucessful insertion
-        case 100: pass
-        
-        # code for errors regarding system
-        case 200: pass
-    
-        # code for errors
-        case 400: pass # 
-        case 401: pass # keyword creation error
-        case 403: pass # error inserting
-    
-
-def logger():
-    """ Log the files in a json format in the chosen directory. """
-    obj = {
-            "Path": str(PATH_DIR.absolute().resolve),
-            "Insertions": insdict,
-            "Existing": existing,
-            "Errors": errdict
-        }
-    if PRINTJSON:
-        print(json.dumps(obj))
-    if MAKELOG:
-        with (PATH_DIR / Path("log.json")).open(mode='w') as file:
-            json.dump(obj, file)
-
-
-# ---------------------------------------------- D A T A B A S E - F U N C T I O N S----------------------------------
-
-def checkRecRows():
-    """ Check which PMC files are already inserted. """
-    pass
-    
-def checkKwRows():
-    """ Check the keywords that are already inserted. """
-    pass
 
 def createTableRec(conn, cur):
     """ Create a table for the records """
@@ -121,6 +34,7 @@ def createTableRec(conn, cur):
     cur.execute('CREATE INDEX IF NOT EXISTS idx_pmid ON records (pmid)')
     conn.commit()
 
+
 def createTableKw(conn_kw, cur_kw):
     """ Create a table for the keywords. """
     
@@ -130,11 +44,11 @@ def createTableKw(conn_kw, cur_kw):
         pmid VARCHAR(32),
         type INTEGER ,
         UNIQUE(keyword, pmid)
-    
     ); 
     ''')
     cur_kw.execute('CREATE INDEX IF NOT EXISTS idx_keywords ON keywords (keyword)')
     conn_kw.commit()
+
 
 def insertRec(conn, cur, batch_data):
     # If batch data is not empty 
@@ -143,7 +57,7 @@ def insertRec(conn, cur, batch_data):
         VALUES (?, ?, ?)
     ''', batch_data)
     conn.commit()
-    
+
 
 def insertKW(conn_kw, cur_kw, batch_data_keywords):
     # Commit the final transaction
@@ -152,39 +66,10 @@ def insertKW(conn_kw, cur_kw, batch_data_keywords):
         VALUES (?, ?, ?)
     ''', batch_data_keywords)
     conn_kw.commit()
-    
-# Create table
-def createTable(cur, tableName, columns):
-    """
-    columns = ("col1", "col2", "col3")
-    """
-    col_def = ", ".join([f"{col} TEXT" for col in columns])
-    cur.execute(f"CREATE TABLE IF NOT EXISTS {tableName} ({col_def})")
-
-# Insert values
-def insert(cur, tableName, values):
-    """
-    values = ("A", "B", "C")
-    """
-    placeholders = ",".join("?" * len(values))
-    cur.execute(f"INSERT INTO {tableName} VALUES({placeholders})", values)
-
-    
-# ------------------------------------- T A R - F I L E - P R O C E S S I N G-----------------------------------------
-
-
 
 
 def processTar(tar_file_paths, conn, cur, conn_kw, cur_kw):
     """ Process the tar files """
-    
-    
-    
-    # remove the xml suffix of the files inside the tar file
-    # use tar.extractfile()
-    # read the content of the file
-    # parse through the json file using the content
-    
     for tar_file_path in tar_file_paths:
         if VERBOSE: print(f"opening {tar_file_path}")
     
@@ -246,10 +131,14 @@ def processTar(tar_file_paths, conn, cur, conn_kw, cur_kw):
                             if st == "ABSTRACT":
                                 abstract = passage['text']
                         kwd = defs+" "+ abstract
-                    
+
+                    except KeyboardInterrupt:
+                        print("User Interrupted process")
+                        sys.exit(1)
                     except Exception as e:
                         print("error",e)
                         pass
+                        
         
                     # compress content before storing inside the db
                     compressed_content = zlib.compress(file_content)
@@ -306,42 +195,123 @@ def processTar(tar_file_paths, conn, cur, conn_kw, cur_kw):
         return 
 
 
-
-
-# ------------------------------------------------------- M A I N -------------------------------------------------------
-
-
-def main():
-    
-    if len(sys.argv) > 1:
-        # Check for the option that was printed out 
-        tar_file_paths = options(sys.argv[1])
-        print(tar_file_paths)
-    else:
-        print("Please specify the option for the file")
-        sys.exit()
-    
-    
-    
+def connectDb(path):
     # Create SQLite database connection (or connect to an existing one)
-    conn = sqlite3.connect('pmc.db')
-    cur = conn.cursor()
-    
-    # create cursor from the connection
-    conn_kw = sqlite3.connect('pmc_kw.db')
-    cur_kw = conn_kw.cursor()
-    
-    # Create the SQLITE tables
+    if (Path(path).resolve()).exists():
+        if path.split("/")[-1] == "db":
+            try:
+                conn = sqlite3.connect(path)
+                conn_kw = sqlite3.connect(path)
+                cur = conn.cursor()
+                cur_kw = conn_kw.cursor()
+            except:
+                conn = sqlite3.connect(path + '/pmc.db')
+                conn_kw = sqlite3.connect(path + '/pmc_kw.db')
+                cur = conn.cursor()
+                cur_kw = conn_kw.cursor()
+        else:
+            conn = sqlite3.connect(path + '/pmc.db')
+            conn_kw = sqlite3.connect(path + '/pmc_kw.db')
+            cur = conn.cursor()
+            cur_kw = conn_kw.cursor()
+    else:
+        Path("./pub").mkdir(exist_ok=True)
+        conn = sqlite3.connect('./pub/pmc.db')
+        conn_kw = sqlite3.connect('./pub/pmc_kw.db')
+        cur = conn.cursor()
+        cur_kw = conn_kw.cursor() 
+
+    #Create the SQLITE tables
     createTableRec(conn, cur)
     createTableKw(conn_kw, cur_kw)
+    
+    return conn, conn_kw, cur, cur_kw
 
-    # Process the tar files 
-    processTar(tar_file_paths, conn, cur, conn_kw, cur_kw)
+ 
+def processPaths(path):
+    # get the paths of the tarfiles - return a list
+    if Path(path).resolve().is_file:
+         return [path]
+
+    elif Path(path).resolve().is_dir:
+        p =  Path(path).resolve().glob('*.tar.gz')
+        files = [x for x in p if x.is_file()]
+        if len(files) == 0:
+            print("no tar.gz files to put in database")
+            sys.exit(0)
+        return files
+    else:
+         raise FileNotFoundError(f"Directory does not exist: {path}")
+
+       
+def PrepareTarInput():
+    """ Process the piped json file for path and files """
+    pyobj = json.loads(sys.stdin.read())
+    path = pyobj["Path"]
+    tar_file_paths = [Path(path +"/"+ obj).resolve() for obj in pyobj["Downloads"].keys() if obj != "sum"]
+    
+    return tar_file_paths
+
+   
+def jsonProcess(obj):
+    """ Receive the json object from the downloads. expect obj -> dict"""
+    downloads = obj["Downloads"].keys()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+    prog='python build_db.py',
+    description = """ Database Building Tools for https://ftp.ncbi.nlm.nih.gov/pub/wilbur/BioC-PMC.
+                      There are two databases created for records and keywords.
+                      inside pmc.db is a table called 'records' and inside pmc_kw is a database called 'keywords'. 
+                      The records table have columns (attributes): id, pmid, and content. The 'keyword' table has 
+                      columns (attributes) keyword, pmid, and type. Information from the tarfile is processed and 
+                      inserted into the databases. The content in records is compressed using the DEFLATE algorithm
+                      used in the zlib module. Therfore, decompression must be performed to make content readable.
+                      Note: [db] is the path to the database ex: C:/Documents/pmc.db; [file/folderPath] is the path 
+                      to the tar.gz file or folder.
+                  """
+    )
+    
+    # option and constraints
+    parser.add_argument('-s', metavar=("[db]", "[filePath]"), type=str, nargs=2, help="Process a single tarfile specified in the filePath argument.")
+    parser.add_argument('-b', metavar=("[db]", "[folderPath]"), type=str, nargs=2, help="Bulk Process all the tar.gz files in the folderPath specified.")
+    parser.add_argument('-p', metavar=("[db]", "[folderPath]"), type=str, nargs=2, help="Bulk process tar.gz in folderPath. For use in a pipeline. Excepts a json stdout from download.py")
+    args = parser.parse_args()
+
+    # print help msg if no arguments passed
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(1)
+
+    # only get argument != None
+    cliArgs = vars(args)
+    for key, value in cliArgs.copy().items():
+        if cliArgs[key] != False and cliArgs[key] != None: 
+            op = key
+
+    # establish connection
+    conn, conn_kw, cur, cur_kw = connectDb(cliArgs[op][0])
+    
+    match op: # cases for arguments
+        
+        case "s": # process a single tarfile
+            tar_file_paths = processPaths(cliArgs[op][1])
+            print(f"Processing {tar_file_paths}")
+            processTar(tar_file_paths, conn, cur, conn_kw, cur_kw)
+            print("done processing tarfile")
+
+        case "b": # download a file with its filename
+            print("Beginning Bulk processing of tar files for the database")
+            tar_file_paths = processPaths(cliArgs[op][1])
+            processTar(tar_file_paths, conn, cur, conn_kw, cur_kw)
+            print("done bulk processing tarfile")
+            
+        case "p": # for use in a pipeline
+            tar_file_paths = PrepareTarInput()
+            processTar(tar_file_paths, conn, cur, conn_kw, cur_kw)
+            print("done")
     
     conn.close()
     conn_kw.close()
     print("End")
-    return 0
-
- 
-main()
