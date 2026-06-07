@@ -5,7 +5,7 @@ SUM_FILE="sum"
 
 download_sum_file() {
     echo "Downloading the sum file..."
-    wget -q -O "$SUM_FILE" "$BASE_URL/$SUM_FILE"
+    wget -q -O "./sum.txt" "$BASE_URL/$SUM_FILE"
 
     if [ ! -f "$SUM_FILE" ]; then
         echo "Error: Failed to download the 'sum' file."
@@ -54,4 +54,3 @@ main() {
 }
 
 main
-
